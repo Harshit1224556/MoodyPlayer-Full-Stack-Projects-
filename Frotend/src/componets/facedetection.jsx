@@ -1,15 +1,16 @@
 import React, { useEffect, useRef, useState } from "react";
 import * as faceapi from "face-api.js";
-import "./FacialExpression.css";
+import "./facialexpression.css"
+import axios from "axios";
 
-export default function FacialExpression() {
+export default function FacialExpression({ setSongs }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [detecting, setDetecting] = useState(false);
   const [intervalId, setIntervalId] = useState(null);
 
-  // ✅ Load models
+
   useEffect(() => {
     const loadModels = async () => {
       const MODEL_URL = "/models";
@@ -20,23 +21,21 @@ export default function FacialExpression() {
           faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
         ]);
         setModelsLoaded(true);
-        console.log("✅ Models loaded successfully");
+        console.log(" Models loaded successfully");
       } catch (err) {
-        console.error("❌ Error loading models:", err);
+        console.error("Error loading models:", err);
       }
     };
     loadModels();
   }, []);
 
-  // ✅ Start camera
+  
   useEffect(() => {
     const startCamera = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          console.log("🎥 Camera started");
-        }
+        if (videoRef.current) videoRef.current.srcObject = stream;
+        console.log("🎥 Camera started");
       } catch (err) {
         console.error("Camera access denied:", err);
         alert("Please allow camera access to continue.");
@@ -45,7 +44,7 @@ export default function FacialExpression() {
     startCamera();
   }, []);
 
-  // ✅ Start detection
+
   const startDetection = () => {
     if (!modelsLoaded) {
       alert("Models are still loading. Please wait...");
@@ -69,15 +68,23 @@ export default function FacialExpression() {
       faceapi.draw.drawDetections(canvas, resized);
       faceapi.draw.drawFaceExpressions(canvas, resized);
 
-      // 👇 Check if any emotion is detected
       if (detections.length > 0) {
         const expressions = detections[0].expressions;
         const mood = Object.keys(expressions).reduce((a, b) =>
           expressions[a] > expressions[b] ? a : b
         );
+
         console.log("🧠 Current Mood:", mood);
+
+        try {
+          const response = await axios.get(`http://localhost:3000/song?mood=${mood}`);
+          console.log(response.data);
+          setSongs(response.data.song); 
+        } catch (error) {
+          console.error(" Error fetching songs:", error);
+        }
       }
-    }, 500);
+    }, 1000);
 
     setIntervalId(id);
     setDetecting(true);
@@ -114,3 +121,5 @@ export default function FacialExpression() {
     </div>
   );
 }
+
+
